@@ -337,11 +337,8 @@ manager = DatabaseManager("config.json")
 databases = manager.list_databases()
 print(databases)
 
-# 切换数据库
-manager.switch_database("production")
-
-# 执行查询
-result = manager.execute_query("SELECT COUNT(*) FROM users")
+# 执行查询（无状态：显式指定数据库名）
+result = manager.execute_query("production", "SELECT COUNT(*) FROM users")
 print(result)
 ```
 

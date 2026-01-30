@@ -1,6 +1,6 @@
 [project]
 name = "database-mcp"
-version = "0.1.0"
+version = "0.2.0"
 description = "A multi-database MCP server supporting multiple remote databases"
 authors = [
     {name = "Nick", email = "nick@example.com"}
@@ -12,6 +12,7 @@ dependencies = [
     "sqlalchemy>=2.0.0",
     "pymysql>=1.1.0",
     "psycopg2-binary>=2.9.0",
+    "pydantic>=2.0.0",
 ]
 
 [project.scripts]

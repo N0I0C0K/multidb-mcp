@@ -1,25 +1,33 @@
 """
 Database connection manager for multi-database support
 """
-import json
-from typing import Dict, Any, Optional
+import os
+from dataclasses import dataclass
+from typing import Dict, Any, Optional, List, Literal
 from urllib.parse import quote_plus
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.engine import Engine
 
 
-class DatabaseConfig:
-    """Database configuration"""
+class DatabaseConfig(BaseModel):
+    """Database configuration with validation"""
     
-    def __init__(self, name: str, config: Dict[str, Any]):
-        self.name = name
-        self.type = config.get("type", "mysql")
-        self.host = config.get("host", "localhost")
-        self.port = config.get("port", 3306 if self.type == "mysql" else 5432)
-        self.user = config.get("user", "root")
-        self.password = config.get("password", "")
-        self.database = config.get("database", "")
-        
+    name: str = Field(..., description="Name of the database connection")
+    type: Literal["mysql", "postgresql"] = Field(..., description="Database type")
+    host: str = Field(default="localhost", description="Database host")
+    port: Optional[int] = Field(default=None, description="Database port")
+    user: str = Field(..., description="Database user")
+    password: str = Field(default="", description="Database password")
+    database: str = Field(..., description="Database name")
+    description: Optional[str] = Field(default=None, description="Description of this database")
+    alias: Optional[str] = Field(default=None, description="Alias name for this database")
+    
+    def model_post_init(self, __context):
+        """Set default port based on database type if not provided"""
+        if self.port is None:
+            self.port = 3306 if self.type == 'mysql' else 5432
+    
     def get_connection_url(self) -> str:
         """Generate SQLAlchemy connection URL"""
         # Properly escape username and password to handle special characters
@@ -34,28 +42,88 @@ class DatabaseConfig:
             raise ValueError(f"Unsupported database type: {self.type}")
 
 
+@dataclass
+class DatabaseInfo:
+    """Information about a database connection"""
+    name: str
+    type: str
+    host: str
+    port: int
+    database: str
+    description: Optional[str] = None
+    alias: Optional[str] = None
+
+
+@dataclass
+class QueryResult:
+    """Result of a query execution"""
+    success: bool
+    columns: Optional[List[str]] = None
+    data: Optional[List[Dict[str, Any]]] = None
+    row_count: Optional[int] = None
+    rows_affected: Optional[int] = None
+
+
+@dataclass
+class TableInfo:
+    """Information about a table structure"""
+    table_name: str
+    columns: List[Dict[str, Any]]
+    primary_keys: Dict[str, Any]
+    indexes: List[Dict[str, Any]]
+    foreign_keys: List[Dict[str, Any]]
+
+
 class DatabaseManager:
     """Manage multiple database connections (stateless)"""
     
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(self):
         self.databases: Dict[str, DatabaseConfig] = {}
         self.engines: Dict[str, Engine] = {}
-        
-        if config_path:
-            self.load_config(config_path)
+        self._load_from_env()
     
-    def load_config(self, config_path: str):
-        """Load database configurations from JSON file"""
-        with open(config_path, 'r') as f:
-            config = json.load(f)
+    def _load_from_env(self):
+        """Load database configurations from environment variables"""
+        # Look for DATABASE_CONFIG_JSON environment variable
+        config_json = os.environ.get("DATABASE_CONFIG_JSON")
+        if config_json:
+            import json
+            config = json.loads(config_json)
+            databases = config.get("databases", {})
+            for name, db_config in databases.items():
+                db_config['name'] = name
+                self.add_database(DatabaseConfig(**db_config))
         
-        databases = config.get("databases", {})
-        for name, db_config in databases.items():
-            self.add_database(name, db_config)
+        # Also support individual database configs via env vars
+        # Format: DB_{NAME}_TYPE, DB_{NAME}_HOST, etc.
+        prefix = "DB_"
+        db_names = set()
+        for key in os.environ.keys():
+            if key.startswith(prefix):
+                parts = key[len(prefix):].split('_', 1)
+                if len(parts) >= 1:
+                    db_names.add(parts[0])
+        
+        for db_name in db_names:
+            name_lower = db_name.lower()
+            db_type = os.environ.get(f"DB_{db_name}_TYPE")
+            if db_type:
+                config_dict = {
+                    "name": name_lower,
+                    "type": db_type,
+                    "host": os.environ.get(f"DB_{db_name}_HOST", "localhost"),
+                    "port": int(os.environ.get(f"DB_{db_name}_PORT", "0")) or None,
+                    "user": os.environ.get(f"DB_{db_name}_USER", "root"),
+                    "password": os.environ.get(f"DB_{db_name}_PASSWORD", ""),
+                    "database": os.environ.get(f"DB_{db_name}_DATABASE", ""),
+                    "description": os.environ.get(f"DB_{db_name}_DESCRIPTION"),
+                    "alias": os.environ.get(f"DB_{db_name}_ALIAS"),
+                }
+                self.add_database(DatabaseConfig(**config_dict))
     
-    def add_database(self, name: str, config: Dict[str, Any]):
+    def add_database(self, config: DatabaseConfig):
         """Add a database configuration"""
-        self.databases[name] = DatabaseConfig(name, config)
+        self.databases[config.name] = config
     
     def get_engine(self, name: str) -> Engine:
         """Get or create database engine"""
@@ -68,19 +136,22 @@ class DatabaseManager:
         
         return self.engines[name]
     
-    def list_databases(self) -> Dict[str, Dict[str, Any]]:
+    def list_databases(self) -> List[DatabaseInfo]:
         """List all configured databases"""
-        result = {}
+        result = []
         for name, config in self.databases.items():
-            result[name] = {
-                "type": config.type,
-                "host": config.host,
-                "port": config.port,
-                "database": config.database
-            }
+            result.append(DatabaseInfo(
+                name=config.name,
+                type=config.type,
+                host=config.host,
+                port=config.port,
+                database=config.database,
+                description=config.description,
+                alias=config.alias
+            ))
         return result
     
-    def execute_query(self, database: str, query: str) -> Dict[str, Any]:
+    def execute_query(self, database: str, query: str) -> QueryResult:
         """
         Execute a SQL query on specified database
         
@@ -106,20 +177,20 @@ class DatabaseManager:
                 for row in rows:
                     data.append(dict(zip(columns, row)))
                 
-                return {
-                    "success": True,
-                    "columns": columns,
-                    "data": data,
-                    "row_count": len(data)
-                }
+                return QueryResult(
+                    success=True,
+                    columns=columns,
+                    data=data,
+                    row_count=len(data)
+                )
             else:
                 conn.commit()
-                return {
-                    "success": True,
-                    "rows_affected": result.rowcount
-                }
+                return QueryResult(
+                    success=True,
+                    rows_affected=result.rowcount
+                )
     
-    def list_tables(self, database: str) -> list:
+    def list_tables(self, database: str) -> List[str]:
         """
         List all tables in specified database
         
@@ -130,7 +201,7 @@ class DatabaseManager:
         inspector = inspect(engine)
         return inspector.get_table_names()
     
-    def describe_table(self, database: str, table_name: str) -> Dict[str, Any]:
+    def describe_table(self, database: str, table_name: str) -> TableInfo:
         """
         Get table structure
         
@@ -151,13 +222,13 @@ class DatabaseManager:
         indexes = inspector.get_indexes(table_name)
         foreign_keys = inspector.get_foreign_keys(table_name)
         
-        return {
-            "table_name": table_name,
-            "columns": columns,
-            "primary_keys": primary_keys,
-            "indexes": indexes,
-            "foreign_keys": foreign_keys
-        }
+        return TableInfo(
+            table_name=table_name,
+            columns=columns,
+            primary_keys=primary_keys,
+            indexes=indexes,
+            foreign_keys=foreign_keys
+        )
     
     def close_all(self):
         """Close all database connections"""
