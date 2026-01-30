@@ -4,7 +4,24 @@
 
 ## 快速开始
 
-### 1. 安装项目
+### 方式一：使用 uvx（最简单）
+
+无需安装，直接运行：
+
+```bash
+# 克隆仓库
+git clone https://github.com/N0I0C0K/database-mcp.git
+cd database-mcp
+
+# 配置数据库
+cp config.example.json config.json
+# 编辑 config.json 填入您的数据库连接信息
+
+# 直接运行
+uvx --from . database-mcp
+```
+
+### 方式二：传统安装方式
 
 ```bash
 # 克隆仓库
@@ -44,7 +61,19 @@ cp config.example.json config.json
 
 ### 3. 启动服务
 
+多种启动方式可选：
+
 ```bash
+# 使用 uvx（推荐，无需安装）
+uvx --from . database-mcp
+
+# 使用已安装的命令
+database-mcp
+
+# 作为 Python 模块运行
+python -m database_mcp
+
+# 或直接运行服务器文件
 python -m database_mcp.server
 ```
 

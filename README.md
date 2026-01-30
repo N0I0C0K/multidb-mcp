@@ -22,7 +22,19 @@
 
 ## 安装
 
-### 使用 uv（推荐）
+### 使用 uvx（最简单，推荐）
+
+无需安装即可直接运行：
+
+```bash
+# 直接运行（从当前目录）
+uvx --from . database-mcp
+
+# 或从 PyPI（如果已发布）
+uvx database-mcp
+```
+
+### 使用 uv 安装
 
 ```bash
 # 创建虚拟环境
@@ -96,23 +108,43 @@ cp config.example.json config.json
 
 ### 启动 MCP 服务器
 
-方式一：直接运行
+方式一：使用 uvx（推荐，无需安装）
+
+```bash
+uvx --from . database-mcp
+```
+
+方式二：使用已安装的命令
+
+```bash
+database-mcp
+```
+
+方式三：作为 Python 模块运行
+
+```bash
+python -m database_mcp
+```
+
+方式四：直接运行服务器文件
 
 ```bash
 python -m database_mcp.server
 ```
 
-方式二：使用 fastmcp 的开发模式
+方式五：使用 fastmcp 的开发模式
 
 ```bash
 fastmcp dev database_mcp/server.py
 ```
 
-方式三：使用自定义配置文件路径
+方式六：使用自定义配置文件路径
 
 ```bash
 export DATABASE_CONFIG=/path/to/your/config.json
-python -m database_mcp.server
+database-mcp
+# 或
+python -m database_mcp
 ```
 
 ### 运行演示
