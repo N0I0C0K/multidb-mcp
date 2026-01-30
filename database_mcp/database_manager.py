@@ -35,12 +35,11 @@ class DatabaseConfig:
 
 
 class DatabaseManager:
-    """Manage multiple database connections"""
+    """Manage multiple database connections (stateless)"""
     
     def __init__(self, config_path: Optional[str] = None):
         self.databases: Dict[str, DatabaseConfig] = {}
         self.engines: Dict[str, Engine] = {}
-        self.current_db: Optional[str] = None
         
         if config_path:
             self.load_config(config_path)
@@ -53,10 +52,6 @@ class DatabaseManager:
         databases = config.get("databases", {})
         for name, db_config in databases.items():
             self.add_database(name, db_config)
-        
-        # Set first database as current if not set
-        if self.databases and not self.current_db:
-            self.current_db = list(self.databases.keys())[0]
     
     def add_database(self, name: str, config: Dict[str, Any]):
         """Add a database configuration"""
@@ -73,20 +68,7 @@ class DatabaseManager:
         
         return self.engines[name]
     
-    def switch_database(self, name: str) -> bool:
-        """Switch to a different database"""
-        if name not in self.databases:
-            raise ValueError(f"Database '{name}' not configured")
-        
-        self.current_db = name
-        return True
-    
-    def get_current_engine(self) -> Engine:
-        """Get current database engine"""
-        if not self.current_db:
-            raise RuntimeError("No database selected")
-        
-        return self.get_engine(self.current_db)
+
     
     def list_databases(self) -> Dict[str, Dict[str, Any]]:
         """List all configured databases"""
@@ -96,19 +78,22 @@ class DatabaseManager:
                 "type": config.type,
                 "host": config.host,
                 "port": config.port,
-                "database": config.database,
-                "current": name == self.current_db
+                "database": config.database
             }
         return result
     
-    def execute_query(self, query: str) -> Dict[str, Any]:
+    def execute_query(self, database: str, query: str) -> Dict[str, Any]:
         """
-        Execute a SQL query on current database
+        Execute a SQL query on specified database
+        
+        Args:
+            database: Name of the database to query
+            query: SQL query to execute
         
         WARNING: This method executes raw SQL and is vulnerable to SQL injection.
         Only use with trusted input or in controlled environments.
         """
-        engine = self.get_current_engine()
+        engine = self.get_engine(database)
         
         with engine.connect() as conn:
             result = conn.execute(text(query))
@@ -136,15 +121,26 @@ class DatabaseManager:
                     "rows_affected": result.rowcount
                 }
     
-    def list_tables(self) -> list:
-        """List all tables in current database"""
-        engine = self.get_current_engine()
+    def list_tables(self, database: str) -> list:
+        """
+        List all tables in specified database
+        
+        Args:
+            database: Name of the database
+        """
+        engine = self.get_engine(database)
         inspector = inspect(engine)
         return inspector.get_table_names()
     
-    def describe_table(self, table_name: str) -> Dict[str, Any]:
-        """Get table structure"""
-        engine = self.get_current_engine()
+    def describe_table(self, database: str, table_name: str) -> Dict[str, Any]:
+        """
+        Get table structure
+        
+        Args:
+            database: Name of the database
+            table_name: Name of the table to describe
+        """
+        engine = self.get_engine(database)
         inspector = inspect(engine)
         
         # Validate table exists

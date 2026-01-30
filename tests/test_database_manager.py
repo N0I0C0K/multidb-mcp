@@ -113,32 +113,22 @@ def test_database_manager_load_config():
         assert len(manager.databases) == 2
         assert "dev" in manager.databases
         assert "prod" in manager.databases
-        assert manager.current_db == "dev"  # First one should be current
     finally:
         os.unlink(temp_path)
 
 
-def test_database_manager_switch():
-    """Test switching between databases"""
-    manager = DatabaseManager()
-    
-    manager.add_database("db1", {"type": "mysql", "host": "localhost", "database": "db1"})
-    manager.add_database("db2", {"type": "mysql", "host": "localhost", "database": "db2"})
-    
-    manager.current_db = "db1"
-    assert manager.current_db == "db1"
-    
-    manager.switch_database("db2")
-    assert manager.current_db == "db2"
-
-
-def test_database_manager_switch_invalid():
-    """Test switching to invalid database"""
+def test_database_manager_get_engine():
+    """Test getting database engine"""
     manager = DatabaseManager()
     manager.add_database("db1", {"type": "mysql", "host": "localhost", "database": "db1"})
     
+    # Should be able to get engine by name
+    engine = manager.get_engine("db1")
+    assert engine is not None
+    
+    # Should raise error for invalid database
     with pytest.raises(ValueError):
-        manager.switch_database("invalid")
+        manager.get_engine("invalid")
 
 
 def test_database_manager_list():
@@ -158,11 +148,10 @@ def test_database_manager_list():
         "database": "db2"
     })
     
-    manager.current_db = "db1"
-    
     databases = manager.list_databases()
     assert len(databases) == 2
-    assert databases["db1"]["current"] is True
-    assert databases["db2"]["current"] is False
     assert databases["db1"]["type"] == "mysql"
     assert databases["db2"]["type"] == "postgresql"
+    # No "current" field in stateless design
+    assert "current" not in databases["db1"]
+    assert "current" not in databases["db2"]

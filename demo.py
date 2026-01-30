@@ -45,11 +45,11 @@ with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
 os.environ['DATABASE_CONFIG'] = config_path
 
 try:
-    # Now import and test the server directly
+    # Now import and test the database manager
     from database_mcp.database_manager import DatabaseManager
     
     print("=" * 60)
-    print("Multi-Database MCP Server Demo")
+    print("Multi-Database MCP Server Demo (Stateless)")
     print("=" * 60)
     
     # Create a database manager with the config
@@ -59,46 +59,36 @@ try:
     print("\n1. Listing all configured databases:")
     result = db_manager.list_databases()
     print(json.dumps({
-        "current_database": db_manager.current_db,
         "databases": result
     }, indent=2))
     
-    # Test switch_database
-    print("\n2. Switching to 'production' database:")
-    db_manager.switch_database("production")
-    print(json.dumps({
-        "success": True,
-        "message": f"Switched to database: production",
-        "current_database": db_manager.current_db
-    }, indent=2))
+    # Demonstrate stateless operations - no need to switch
+    print("\n2. Querying 'dev1' database (stateless - specify database in call):")
+    print("   [Note: This would execute: db_manager.execute_query('dev1', 'SELECT ...')]\n")
     
-    # List again to confirm switch
-    print("\n3. Listing databases after switch:")
-    result = db_manager.list_databases()
-    print(json.dumps({
-        "current_database": db_manager.current_db,
-        "databases": result
-    }, indent=2))
+    print("\n3. Querying 'production' database (stateless - specify database in call):")
+    print("   [Note: This would execute: db_manager.execute_query('production', 'SELECT ...')]\n")
     
-    # Switch to test database
-    print("\n4. Switching to 'test' database:")
-    db_manager.switch_database("test")
-    print(json.dumps({
-        "success": True,
-        "message": f"Switched to database: test",
-        "current_database": db_manager.current_db
-    }, indent=2))
+    print("\n4. Back to 'dev1' without switching (stateless):")
+    print("   [Note: This would execute: db_manager.execute_query('dev1', 'SELECT ...')]\n")
     
-    # Try switching to non-existent database
-    print("\n5. Trying to switch to non-existent database:")
+    print("\n5. Try invalid database name:")
     try:
-        db_manager.switch_database("nonexistent")
+        # This will raise ValueError for non-existent database
+        db_manager.get_engine("nonexistent")
         result = {"success": False, "error": "Should have raised error"}
     except ValueError as e:
         result = {"success": False, "error": str(e)}
     print(json.dumps(result, indent=2))
     
     print("\n" + "=" * 60)
+    print("Key Difference: STATELESS Design")
+    print("=" * 60)
+    print("✓ No 'switch_database' needed")
+    print("✓ Each operation specifies which database to use")
+    print("✓ Server maintains no state between calls")
+    print("✓ Can query different databases in any order")
+    print("=" * 60)
     print("Demo completed successfully!")
     print("=" * 60)
 

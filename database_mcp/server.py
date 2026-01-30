@@ -26,7 +26,7 @@ def list_databases() -> dict[str, Any]:
     List all configured databases
     
     Returns:
-        Dictionary with database configurations and which one is currently active
+        Dictionary with all database configurations
     """
     databases = db_manager.list_databases()
     
@@ -37,173 +37,146 @@ def list_databases() -> dict[str, Any]:
         }
     
     return {
-        "current_database": db_manager.current_db,
         "databases": databases
     }
 
 
 @mcp.tool()
-def switch_database(name: str) -> dict[str, Any]:
+def execute_query(database: str, query: str) -> dict[str, Any]:
     """
-    Switch to a different database
-    
-    Args:
-        name: Name of the database to switch to
-        
-    Returns:
-        Success status and current database name
-    """
-    try:
-        db_manager.switch_database(name)
-        return {
-            "success": True,
-            "message": f"Switched to database: {name}",
-            "current_database": name
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "error": str(e)
-        }
-
-
-@mcp.tool()
-def execute_query(query: str) -> dict[str, Any]:
-    """
-    Execute a SQL query on the current database
+    Execute a SQL query on the specified database
     
     WARNING: This tool executes raw SQL. Only use with trusted queries.
     
     Args:
+        database: Name of the database to query
         query: SQL query to execute
         
     Returns:
         Query results with data and metadata
     """
-    if not db_manager.current_db:
+    try:
+        result = db_manager.execute_query(database, query)
+        result["database"] = database
+        return result
+    except ValueError as e:
         return {
             "success": False,
-            "error": "No database selected. Use switch_database first."
+            "error": f"Database not found: {str(e)}",
+            "database": database
         }
-    
-    try:
-        result = db_manager.execute_query(query)
-        result["database"] = db_manager.current_db
-        return result
     except ProgrammingError as e:
         return {
             "success": False,
             "error": f"SQL syntax error: {str(e)}",
-            "database": db_manager.current_db
+            "database": database
         }
     except OperationalError as e:
         return {
             "success": False,
             "error": f"Database connection or permission error: {str(e)}",
-            "database": db_manager.current_db
+            "database": database
         }
     except SQLAlchemyError as e:
         return {
             "success": False,
             "error": f"Database error: {str(e)}",
-            "database": db_manager.current_db
+            "database": database
         }
     except Exception as e:
         return {
             "success": False,
             "error": f"Unexpected error: {str(e)}",
-            "database": db_manager.current_db
+            "database": database
         }
 
 
 @mcp.tool()
-def list_tables() -> dict[str, Any]:
+def list_tables(database: str) -> dict[str, Any]:
     """
-    List all tables in the current database
+    List all tables in the specified database
     
+    Args:
+        database: Name of the database
+        
     Returns:
         List of table names
     """
-    if not db_manager.current_db:
-        return {
-            "success": False,
-            "error": "No database selected. Use switch_database first."
-        }
-    
     try:
-        tables = db_manager.list_tables()
+        tables = db_manager.list_tables(database)
         return {
             "success": True,
-            "database": db_manager.current_db,
+            "database": database,
             "tables": tables,
             "count": len(tables)
+        }
+    except ValueError as e:
+        return {
+            "success": False,
+            "error": f"Database not found: {str(e)}",
+            "database": database
         }
     except OperationalError as e:
         return {
             "success": False,
             "error": f"Database connection error: {str(e)}",
-            "database": db_manager.current_db
+            "database": database
         }
     except SQLAlchemyError as e:
         return {
             "success": False,
             "error": f"Database error: {str(e)}",
-            "database": db_manager.current_db
+            "database": database
         }
     except Exception as e:
         return {
             "success": False,
             "error": f"Unexpected error: {str(e)}",
-            "database": db_manager.current_db
+            "database": database
         }
 
 
 @mcp.tool()
-def describe_table(table_name: str) -> dict[str, Any]:
+def describe_table(database: str, table_name: str) -> dict[str, Any]:
     """
     Get detailed information about a table structure
     
     Args:
+        database: Name of the database
         table_name: Name of the table to describe
         
     Returns:
         Table structure including columns, keys, and indexes
     """
-    if not db_manager.current_db:
-        return {
-            "success": False,
-            "error": "No database selected. Use switch_database first."
-        }
-    
     try:
-        table_info = db_manager.describe_table(table_name)
+        table_info = db_manager.describe_table(database, table_name)
         table_info["success"] = True
-        table_info["database"] = db_manager.current_db
+        table_info["database"] = database
         return table_info
     except ValueError as e:
-        # Table not found or validation error
+        # Table not found, database not found, or validation error
         return {
             "success": False,
             "error": str(e),
-            "database": db_manager.current_db
+            "database": database
         }
     except OperationalError as e:
         return {
             "success": False,
             "error": f"Database connection error: {str(e)}",
-            "database": db_manager.current_db
+            "database": database
         }
     except SQLAlchemyError as e:
         return {
             "success": False,
             "error": f"Database error: {str(e)}",
-            "database": db_manager.current_db
+            "database": database
         }
     except Exception as e:
         return {
             "success": False,
             "error": f"Unexpected error: {str(e)}",
-            "database": db_manager.current_db
+            "database": database
         }
 
 
