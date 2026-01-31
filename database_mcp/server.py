@@ -3,10 +3,9 @@ Multi-Database MCP Server
 A Model Context Protocol server for managing multiple database connections
 """
 import os
-from dataclasses import dataclass, asdict
-from typing import Any, List, Optional
+from typing import Annotated
+from pydantic import BaseModel, Field
 from fastmcp import FastMCP
-from sqlalchemy.exc import SQLAlchemyError, OperationalError, ProgrammingError
 from database_mcp.database_manager import DatabaseManager, DatabaseInfo, QueryResult, TableInfo
 
 # Initialize FastMCP server
@@ -22,47 +21,36 @@ if os.path.exists(config_path):
     db_manager.load_config(config_path)
 
 
-@dataclass
-class ErrorResponse:
-    """Standard error response"""
-    success: bool = False
-    error: str = ""
-    database: Optional[str] = None
-
-
-@dataclass
-class QueryResponse:
+class QueryResponse(BaseModel):
     """Response for query execution"""
     success: bool
     database: str
-    columns: Optional[List[str]] = None
-    data: Optional[List[dict]] = None
-    row_count: Optional[int] = None
-    rows_affected: Optional[int] = None
-    error: Optional[str] = None
+    columns: Annotated[list[str] | None, Field(default=None)]
+    data: Annotated[list[dict] | None, Field(default=None)]
+    row_count: Annotated[int | None, Field(default=None)]
+    rows_affected: Annotated[int | None, Field(default=None)]
+    error: Annotated[str | None, Field(default=None)]
 
 
-@dataclass
-class TablesResponse:
+class TablesResponse(BaseModel):
     """Response for list tables"""
     success: bool
     database: str
-    tables: Optional[List[str]] = None
-    count: Optional[int] = None
-    error: Optional[str] = None
+    tables: Annotated[list[str] | None, Field(default=None)]
+    count: Annotated[int | None, Field(default=None)]
+    error: Annotated[str | None, Field(default=None)]
 
 
-@dataclass
-class TableDescriptionResponse:
+class TableDescriptionResponse(BaseModel):
     """Response for table description"""
     success: bool
     database: str
-    table_name: Optional[str] = None
-    columns: Optional[List[dict]] = None
-    primary_keys: Optional[dict] = None
-    indexes: Optional[List[dict]] = None
-    foreign_keys: Optional[List[dict]] = None
-    error: Optional[str] = None
+    table_name: Annotated[str | None, Field(default=None)]
+    columns: Annotated[list[dict] | None, Field(default=None)]
+    primary_keys: Annotated[dict | None, Field(default=None)]
+    indexes: Annotated[list[dict] | None, Field(default=None)]
+    foreign_keys: Annotated[list[dict] | None, Field(default=None)]
+    error: Annotated[str | None, Field(default=None)]
 
 
 @mcp.resource("database://list")
@@ -74,11 +62,13 @@ def list_databases_resource() -> str:
         JSON string with all database configurations
     """
     import json
+    from dataclasses import asdict
+    
     databases = db_manager.list_databases()
     
     if not databases:
         return json.dumps({
-            "message": "No databases configured. Set DATABASE_CONFIG_JSON or DB_* environment variables.",
+            "message": "No databases configured. Check your config.json file.",
             "databases": []
         }, indent=2)
     
@@ -88,7 +78,7 @@ def list_databases_resource() -> str:
 
 
 @mcp.tool()
-def execute_query(database: str, query: str) -> dict[str, Any]:
+def execute_query(database: str, query: str) -> QueryResponse:
     """
     Execute a SQL query on the specified database
     
@@ -103,7 +93,7 @@ def execute_query(database: str, query: str) -> dict[str, Any]:
     """
     try:
         result = db_manager.execute_query(database, query)
-        response = QueryResponse(
+        return QueryResponse(
             success=True,
             database=database,
             columns=result.columns,
@@ -111,46 +101,16 @@ def execute_query(database: str, query: str) -> dict[str, Any]:
             row_count=result.row_count,
             rows_affected=result.rows_affected
         )
-        return asdict(response)
-    except ValueError as e:
-        response = QueryResponse(
-            success=False,
-            database=database,
-            error=f"Database not found: {str(e)}"
-        )
-        return asdict(response)
-    except ProgrammingError as e:
-        response = QueryResponse(
-            success=False,
-            database=database,
-            error=f"SQL syntax error: {str(e)}"
-        )
-        return asdict(response)
-    except OperationalError as e:
-        response = QueryResponse(
-            success=False,
-            database=database,
-            error=f"Database connection or permission error: {str(e)}"
-        )
-        return asdict(response)
-    except SQLAlchemyError as e:
-        response = QueryResponse(
-            success=False,
-            database=database,
-            error=f"Database error: {str(e)}"
-        )
-        return asdict(response)
     except Exception as e:
-        response = QueryResponse(
+        return QueryResponse(
             success=False,
             database=database,
-            error=f"Unexpected error: {str(e)}"
+            error=str(e)
         )
-        return asdict(response)
 
 
 @mcp.tool()
-def list_tables(database: str) -> dict[str, Any]:
+def list_tables(database: str) -> TablesResponse:
     """
     List all tables in the specified database
     
@@ -162,45 +122,22 @@ def list_tables(database: str) -> dict[str, Any]:
     """
     try:
         tables = db_manager.list_tables(database)
-        response = TablesResponse(
+        return TablesResponse(
             success=True,
             database=database,
             tables=tables,
             count=len(tables)
         )
-        return asdict(response)
-    except ValueError as e:
-        response = TablesResponse(
-            success=False,
-            database=database,
-            error=f"Database not found: {str(e)}"
-        )
-        return asdict(response)
-    except OperationalError as e:
-        response = TablesResponse(
-            success=False,
-            database=database,
-            error=f"Database connection error: {str(e)}"
-        )
-        return asdict(response)
-    except SQLAlchemyError as e:
-        response = TablesResponse(
-            success=False,
-            database=database,
-            error=f"Database error: {str(e)}"
-        )
-        return asdict(response)
     except Exception as e:
-        response = TablesResponse(
+        return TablesResponse(
             success=False,
             database=database,
-            error=f"Unexpected error: {str(e)}"
+            error=str(e)
         )
-        return asdict(response)
 
 
 @mcp.tool()
-def describe_table(database: str, table_name: str) -> dict[str, Any]:
+def describe_table(database: str, table_name: str) -> TableDescriptionResponse:
     """
     Get detailed information about a table structure
     
@@ -213,7 +150,7 @@ def describe_table(database: str, table_name: str) -> dict[str, Any]:
     """
     try:
         table_info = db_manager.describe_table(database, table_name)
-        response = TableDescriptionResponse(
+        return TableDescriptionResponse(
             success=True,
             database=database,
             table_name=table_info.table_name,
@@ -222,36 +159,12 @@ def describe_table(database: str, table_name: str) -> dict[str, Any]:
             indexes=table_info.indexes,
             foreign_keys=table_info.foreign_keys
         )
-        return asdict(response)
-    except ValueError as e:
-        # Table not found, database not found, or validation error
-        response = TableDescriptionResponse(
+    except Exception as e:
+        return TableDescriptionResponse(
             success=False,
             database=database,
             error=str(e)
         )
-        return asdict(response)
-    except OperationalError as e:
-        response = TableDescriptionResponse(
-            success=False,
-            database=database,
-            error=f"Database connection error: {str(e)}"
-        )
-        return asdict(response)
-    except SQLAlchemyError as e:
-        response = TableDescriptionResponse(
-            success=False,
-            database=database,
-            error=f"Database error: {str(e)}"
-        )
-        return asdict(response)
-    except Exception as e:
-        response = TableDescriptionResponse(
-            success=False,
-            database=database,
-            error=f"Unexpected error: {str(e)}"
-        )
-        return asdict(response)
 
 
 if __name__ == "__main__":

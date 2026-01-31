@@ -3,7 +3,7 @@ Database connection manager for multi-database support
 """
 import json
 from dataclasses import dataclass
-from typing import Dict, Any, Optional, List, Literal
+from typing import Annotated, Any, Literal
 from urllib.parse import quote_plus
 from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, text, inspect
@@ -13,15 +13,15 @@ from sqlalchemy.engine import Engine
 class DatabaseConfig(BaseModel):
     """Database configuration with validation"""
     
-    name: str = Field(..., description="Name of the database connection")
-    type: Literal["mysql", "postgresql"] = Field(..., description="Database type")
-    host: str = Field(default="localhost", description="Database host")
-    port: Optional[int] = Field(default=None, description="Database port")
-    user: str = Field(..., description="Database user")
-    password: str = Field(default="", description="Database password")
-    database: str = Field(..., description="Database name")
-    description: Optional[str] = Field(default=None, description="Description of this database")
-    alias: Optional[str] = Field(default=None, description="Alias name for this database")
+    name: Annotated[str, Field(description="Name of the database connection")]
+    type: Annotated[Literal["mysql", "postgresql"], Field(description="Database type")]
+    host: Annotated[str, Field(default="localhost", description="Database host")]
+    port: Annotated[int | None, Field(default=None, description="Database port")]
+    user: Annotated[str, Field(description="Database user")]
+    password: Annotated[str, Field(default="", description="Database password")]
+    database: Annotated[str, Field(description="Database name")]
+    description: Annotated[str | None, Field(default=None, description="Description of this database")]
+    alias: Annotated[str | None, Field(default=None, description="Alias name for this database")]
     
     def model_post_init(self, __context):
         """Set default port based on database type if not provided"""
@@ -50,42 +50,42 @@ class DatabaseInfo:
     host: str
     port: int
     database: str
-    description: Optional[str] = None
-    alias: Optional[str] = None
+    description: str | None = None
+    alias: str | None = None
 
 
 @dataclass
 class QueryResult:
     """Result of a query execution"""
     success: bool
-    columns: Optional[List[str]] = None
-    data: Optional[List[Dict[str, Any]]] = None
-    row_count: Optional[int] = None
-    rows_affected: Optional[int] = None
+    columns: list[str] | None = None
+    data: list[dict[str, Any]] | None = None
+    row_count: int | None = None
+    rows_affected: int | None = None
 
 
 @dataclass
 class TableInfo:
     """Information about a table structure"""
     table_name: str
-    columns: List[Dict[str, Any]]
-    primary_keys: Dict[str, Any]
-    indexes: List[Dict[str, Any]]
-    foreign_keys: List[Dict[str, Any]]
+    columns: list[dict[str, Any]]
+    primary_keys: dict[str, Any]
+    indexes: list[dict[str, Any]]
+    foreign_keys: list[dict[str, Any]]
 
 
 class DatabaseManager:
     """Manage multiple database connections (stateless)"""
     
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(self, config_path: str | None = None):
         """
         Initialize database manager
         
         Args:
             config_path: Path to configuration file. If None, no config is loaded.
         """
-        self.databases: Dict[str, DatabaseConfig] = {}
-        self.engines: Dict[str, Engine] = {}
+        self.databases: dict[str, DatabaseConfig] = {}
+        self.engines: dict[str, Engine] = {}
         
         if config_path:
             self.load_config(config_path)
@@ -103,7 +103,7 @@ class DatabaseManager:
         databases = config.get("databases", {})
         for name, db_config in databases.items():
             db_config['name'] = name
-            self.add_database(DatabaseConfig(**db_config))
+            self.add_database(DatabaseConfig.model_validate(db_config))
     
     def add_database(self, config: DatabaseConfig):
         """Add a database configuration"""
@@ -120,7 +120,7 @@ class DatabaseManager:
         
         return self.engines[name]
     
-    def list_databases(self) -> List[DatabaseInfo]:
+    def list_databases(self) -> list[DatabaseInfo]:
         """List all configured databases"""
         result = []
         for name, config in self.databases.items():
@@ -174,7 +174,7 @@ class DatabaseManager:
                     rows_affected=result.rowcount
                 )
     
-    def list_tables(self, database: str) -> List[str]:
+    def list_tables(self, database: str) -> list[str]:
         """
         List all tables in specified database
         
