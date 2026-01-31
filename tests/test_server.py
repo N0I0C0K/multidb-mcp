@@ -8,37 +8,20 @@ import json
 import tempfile
 import os
 from typing import Generator
+from pathlib import Path
 from fastmcp.client import Client
 from fastmcp.client.transports import FastMCPTransport
-from database_mcp.server import mcp
-
-
-@pytest.fixture
-def temp_config() -> Generator[str, None, None]:
-    """创建包含测试数据库配置的临时配置文件"""
-    config = {
-        "databases": {
-            "test_db": {
-                "type": "mysql",
-                "host": "localhost",
-                "port": 3306,
-                "user": "test_user",
-                "password": "test_pass",
-                "database": "test_database",
-                "description": "Test database",
-            }
-        }
-    }
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-        json.dump(config, f)
-        temp_path = f.name
-    yield temp_path
-    os.unlink(temp_path)
+from database_mcp.server import mcp, db_manager
 
 
 @pytest_asyncio.fixture
 async def server_client():
     """创建 FastMCP 客户端以测试服务器"""
+    # 加载测试数据库配置
+    test_config_path = Path(__file__).parent / "test_database.json"
+    if test_config_path.exists():
+        db_manager.load_config(str(test_config_path))
+
     async with Client(transport=mcp) as client:
         yield client
 
@@ -98,6 +81,12 @@ async def test_describe_table_with_invalid_database(
 async def test_database_crud_operations(server_client: Client[FastMCPTransport]):
     """测试数据库完整的 CRUD 操作流程"""
 
+    # 0. 清理：先删除可能存在的表
+    drop_query = "DROP TABLE IF EXISTS test_users"
+    await server_client.call_tool(
+        name="execute_query", arguments={"database": "test_db", "query": drop_query}
+    )
+
     # 1. 创建表
     create_query = """
     CREATE TABLE IF NOT EXISTS test_users (
@@ -112,6 +101,7 @@ async def test_database_crud_operations(server_client: Client[FastMCPTransport])
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
+    assert result.data.get("success") is True
 
     # 2. 插入数据
     insert_query = """
@@ -123,6 +113,7 @@ async def test_database_crud_operations(server_client: Client[FastMCPTransport])
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
+    assert result.data.get("success") is True
 
     # 3. 查询数据并验证
     select_query = "SELECT * FROM test_users WHERE name = 'Alice'"
@@ -131,6 +122,7 @@ async def test_database_crud_operations(server_client: Client[FastMCPTransport])
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
+    assert result.data.get("success") is True
 
     # 4. 更新数据
     update_query = """
@@ -143,6 +135,7 @@ async def test_database_crud_operations(server_client: Client[FastMCPTransport])
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
+    assert result.data.get("success") is True
 
     # 5. 验证更新后的数据
     result = await server_client.call_tool(
@@ -150,6 +143,7 @@ async def test_database_crud_operations(server_client: Client[FastMCPTransport])
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
+    assert result.data.get("success") is True
 
     # 6. 删除数据
     delete_query = "DELETE FROM test_users WHERE name = 'Alice'"
@@ -158,6 +152,7 @@ async def test_database_crud_operations(server_client: Client[FastMCPTransport])
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
+    assert result.data.get("success") is True
 
     # 7. 验证删除后数据为空
     result = await server_client.call_tool(
@@ -165,6 +160,7 @@ async def test_database_crud_operations(server_client: Client[FastMCPTransport])
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
+    assert result.data.get("success") is True
 
     # 8. 清理：删除表
     drop_query = "DROP TABLE IF EXISTS test_users"
@@ -173,6 +169,7 @@ async def test_database_crud_operations(server_client: Client[FastMCPTransport])
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
+    assert result.data.get("success") is True
 
 
 @pytest.mark.asyncio
@@ -183,11 +180,18 @@ async def test_list_tables_basic(server_client: Client[FastMCPTransport]):
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
+    assert result.data.get("success") is True
 
 
 @pytest.mark.asyncio
 async def test_describe_table_structure(server_client: Client[FastMCPTransport]):
     """测试描述表结构"""
+    # 清理：先删除可能存在的表
+    drop_query = "DROP TABLE IF EXISTS test_describe_table"
+    await server_client.call_tool(
+        name="execute_query", arguments={"database": "test_db", "query": drop_query}
+    )
+
     # 先创建表
     create_query = """
     CREATE TABLE IF NOT EXISTS test_describe_table (
@@ -195,9 +199,12 @@ async def test_describe_table_structure(server_client: Client[FastMCPTransport])
         name VARCHAR(100) NOT NULL
     )
     """
-    await server_client.call_tool(
+    create_result = await server_client.call_tool(
         name="execute_query", arguments={"database": "test_db", "query": create_query}
     )
+    assert create_result.data is not None
+    assert isinstance(create_result.data, dict)
+    assert create_result.data.get("success") is True
 
     # 描述表结构
     result = await server_client.call_tool(
@@ -206,6 +213,7 @@ async def test_describe_table_structure(server_client: Client[FastMCPTransport])
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
+    assert result.data.get("success") is True
 
     # 清理：删除表
     drop_query = "DROP TABLE IF EXISTS test_describe_table"

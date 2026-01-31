@@ -230,9 +230,18 @@ class DatabaseManager:
         indexes = inspector.get_indexes(table_name)
         foreign_keys = inspector.get_foreign_keys(table_name)
 
+        # Convert SQLAlchemy types to serializable format
+        serializable_columns = []
+        for col in columns:
+            col_dict = dict(col)
+            # Convert type to string representation
+            if "type" in col_dict:
+                col_dict["type"] = str(col_dict["type"])
+            serializable_columns.append(col_dict)
+
         return TableInfo(
             table_name=table_name,
-            columns=columns,
+            columns=serializable_columns,
             primary_keys=primary_keys,
             indexes=indexes,
             foreign_keys=foreign_keys,
