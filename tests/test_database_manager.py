@@ -8,7 +8,7 @@ import tempfile
 import os
 import time
 from typing import Generator
-from database_mcp.database_manager import DatabaseManager, DatabaseConfig
+from multidb_mcp.database_manager import DatabaseManager, DatabaseConfig
 
 
 @pytest.fixture

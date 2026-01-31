@@ -1,4 +1,4 @@
-# Database MCP Server - 实现总结
+# MultiDB MCP Server - 实现总结
 
 ## 项目概述
 
@@ -61,8 +61,8 @@
 ## 项目结构
 
 ```
-database-mcp/
-├── database_mcp/              # 主包
+multidb-mcp/
+├── multidb_mcp/              # 主包
 │   ├── __init__.py            # 包初始化
 │   ├── database_manager.py    # 数据库管理器 (核心逻辑)
 │   └── server.py              # MCP 服务器 (工具定义)
@@ -96,8 +96,8 @@ database-mcp/
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/N0I0C0K/database-mcp.git
-cd database-mcp
+git clone https://github.com/N0I0C0K/multidb-mcp.git
+cd multidb-mcp
 
 # 2. 安装依赖
 uv venv
@@ -109,7 +109,7 @@ cp config.example.json config.json
 # 编辑 config.json
 
 # 4. 启动服务
-python -m database_mcp.server
+python -m multidb_mcp.server
 ```
 
 ## 设计决策

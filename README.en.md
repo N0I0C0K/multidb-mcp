@@ -1,4 +1,4 @@
-# Database MCP Server
+# MultiDB MCP Server
 
 MCP (Model Context Protocol) server supporting multiple remote databases. Stateless design - specify the database with each call.
 
@@ -14,7 +14,7 @@ MCP (Model Context Protocol) server supporting multiple remote databases. Statel
 ### Recommended: Using uvx
 
 ```bash
-uvx --from . database-mcp
+uvx --from . multidb-mcp
 ```
 
 ### Other methods
@@ -23,13 +23,13 @@ uvx --from . database-mcp
 ```bash
 uv venv && source .venv/bin/activate
 uv pip install -e .
-database-mcp
+multidb-mcp
 ```
 
 **Using pip:**
 ```bash
 pip install -e .
-database-mcp
+multidb-mcp
 ```
 
 ## Configuration
@@ -77,16 +77,16 @@ cp config.example.json config.json  # Edit with actual connection details
 
 ```bash
 # Using default config
-database-mcp
+multidb-mcp
 
 # Using custom config
-database-mcp --config /path/to/config.json
+multidb-mcp --config /path/to/config.json
 
 # Using environment variable
-export DATABASE_CONFIG_PATH=/path/to/config.json && database-mcp
+export DATABASE_CONFIG_PATH=/path/to/config.json && multidb-mcp
 
 # Development mode
-fastmcp dev database_mcp/server.py
+fastmcp dev multidb_mcp/server.py
 ```
 
 ### Run demo

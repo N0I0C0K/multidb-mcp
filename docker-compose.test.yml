@@ -3,7 +3,7 @@ version: '3.8'
 services:
   mysql-test:
     image: mysql:8.0
-    container_name: database-mcp-test-mysql
+    container_name: multidb-mcp-test-mysql
     environment:
       MYSQL_ROOT_PASSWORD: test_root_pass
       MYSQL_DATABASE: test_db
@@ -21,7 +21,7 @@ services:
 
   postgres-test:
     image: postgres:15
-    container_name: database-mcp-test-postgres
+    container_name: multidb-mcp-test-postgres
     environment:
       POSTGRES_USER: test_user
       POSTGRES_PASSWORD: test_pass

@@ -11,7 +11,7 @@ from typing import Generator
 from pathlib import Path
 from fastmcp.client import Client
 from fastmcp.client.transports import FastMCPTransport
-from database_mcp.server import mcp, db_manager
+from multidb_mcp.server import mcp, db_manager
 
 
 @pytest_asyncio.fixture

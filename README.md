@@ -1,4 +1,4 @@
-# Database MCP Server
+# MultiDB MCP Server
 
 支持多个远程数据库的 MCP (Model Context Protocol) 服务。采用无状态设计，每次调用时指定要操作的数据库。
 
@@ -14,7 +14,7 @@
 ### 推荐方式：使用 uvx
 
 ```bash
-uvx --from . database-mcp
+uvx --from . multidb-mcp
 ```
 
 ### 其他方式
@@ -23,13 +23,13 @@ uvx --from . database-mcp
 ```bash
 uv venv && source .venv/bin/activate
 uv pip install -e .
-database-mcp
+multidb-mcp
 ```
 
 **使用 pip:**
 ```bash
 pip install -e .
-database-mcp
+multidb-mcp
 ```
 
 ## 配置
@@ -77,16 +77,16 @@ cp config.example.json config.json  # 编辑后填入实际连接信息
 
 ```bash
 # 使用默认配置文件
-database-mcp
+multidb-mcp
 
 # 使用自定义配置文件
-database-mcp --config /path/to/config.json
+multidb-mcp --config /path/to/config.json
 
 # 使用环境变量
-export DATABASE_CONFIG_PATH=/path/to/config.json && database-mcp
+export DATABASE_CONFIG_PATH=/path/to/config.json && multidb-mcp
 
 # 开发模式
-fastmcp dev database_mcp/server.py
+fastmcp dev multidb_mcp/server.py
 ```
 
 ### 运行演示

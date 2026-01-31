@@ -7,7 +7,7 @@ import os
 from typing import Annotated, TypeVar, Generic
 from pydantic import BaseModel, Field
 from fastmcp import FastMCP
-from database_mcp.database_manager import (
+from multidb_mcp.database_manager import (
     DatabaseManager,
     DatabaseInfo,
     SelectResult,
@@ -17,7 +17,7 @@ from database_mcp.database_manager import (
 )
 
 # Initialize FastMCP server
-mcp = FastMCP("database-mcp")
+mcp = FastMCP("multidb-mcp")
 
 # Determine config file path
 # Priority: DATABASE_CONFIG_PATH env var > default config.json
