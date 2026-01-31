@@ -208,3 +208,6 @@ __marimo__/
 
 # Database config (contains sensitive credentials)
 config.json
+
+# vscode
+.vscode
