@@ -37,6 +37,10 @@ class ErrorResponse(BaseModel):
 
 
 _T = TypeVar("_T", bound=BaseModel)
+CONNECTION_NAME = Annotated[
+    str,
+    Field(description="Name of the database connection defined in config file"),
+]
 
 
 class SuccessResponse(
@@ -62,40 +66,36 @@ def list_databases_resource():
 
 @mcp.tool()
 def execute_query(
-    database: str, query: str
+    connection_name: CONNECTION_NAME,
+    query: Annotated[str, Field(description="SQL query to execute")],
 ) -> SuccessResponse[SelectResult | UpdateResult] | ErrorResponse:
     """
     Execute a SQL query on the specified database
 
     WARNING: This tool executes raw SQL. Only use with trusted queries.
 
-    Args:
-        database: Name of the database to query
-        query: SQL query to execute
-
     Returns:
         SuccessResponse with SelectResult or UpdateResult, or ErrorResponse on error
     """
     try:
-        result = db_manager.execute_query(database, query)
+        result = db_manager.execute_query(connection_name, query)
         return SuccessResponse(success=True, data=result)
     except Exception as e:
         return ErrorResponse(success=False, error=str(e))
 
 
 @mcp.tool()
-def list_tables(database: str) -> SuccessResponse[TablesResult] | ErrorResponse:
+def list_tables(
+    connection_name: CONNECTION_NAME,
+) -> SuccessResponse[TablesResult] | ErrorResponse:
     """
     List all tables in the specified database
-
-    Args:
-        database: Name of the database
 
     Returns:
         SuccessResponse with TablesResult or ErrorResponse on error
     """
     try:
-        result = db_manager.list_tables(database)
+        result = db_manager.list_tables(connection_name)
         return SuccessResponse(success=True, data=result)
     except Exception as e:
         return ErrorResponse(success=False, error=str(e))
@@ -103,20 +103,17 @@ def list_tables(database: str) -> SuccessResponse[TablesResult] | ErrorResponse:
 
 @mcp.tool()
 def describe_table(
-    database: str, table_name: str
+    connection_name: CONNECTION_NAME,
+    table_name: Annotated[str, Field(description="Name of the table to describe")],
 ) -> SuccessResponse[TableInfo] | ErrorResponse:
     """
     Get detailed information about a table structure
-
-    Args:
-        database: Name of the database
-        table_name: Name of the table to describe
 
     Returns:
         SuccessResponse with TableInfo or ErrorResponse on error
     """
     try:
-        result = db_manager.describe_table(database, table_name)
+        result = db_manager.describe_table(connection_name, table_name)
         return SuccessResponse(success=True, data=result)
     except Exception as e:
         return ErrorResponse(success=False, error=str(e))

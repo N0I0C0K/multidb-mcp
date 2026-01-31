@@ -107,7 +107,7 @@ Execute SQL query on specified database.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `database` | string | Database name |
+| `connection_name` | string | Database connection name from config file |
 | `query` | string | SQL query statement |
 
 ### 3. list_tables
@@ -116,7 +116,7 @@ List all tables in specified database.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `database` | string | Database name |
+| `connection_name` | string | Database connection name from config file |
 
 ### 4. describe_table
 
@@ -124,7 +124,7 @@ Get table structure details (fields, types, constraints).
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `database` | string | Database name |
+| `connection_name` | string | Database connection name from config file |
 | `table_name` | string | Table name |
 
 ## Stateless Design

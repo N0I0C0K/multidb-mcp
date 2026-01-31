@@ -43,7 +43,7 @@ async def test_execute_query_with_invalid_database(
     """测试对不存在的数据库执行查询返回错误"""
     result = await server_client.call_tool(
         name="execute_query",
-        arguments={"database": "nonexistent_db", "query": "SELECT 1"},
+        arguments={"connection_name": "nonexistent_db", "query": "SELECT 1"},
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
@@ -56,7 +56,7 @@ async def test_list_tables_with_invalid_database(
 ):
     """测试列出不存在的数据库的表返回错误"""
     result = await server_client.call_tool(
-        name="list_tables", arguments={"database": "nonexistent_db"}
+        name="list_tables", arguments={"connection_name": "nonexistent_db"}
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
@@ -70,7 +70,7 @@ async def test_describe_table_with_invalid_database(
     """测试描述不存在的数据库中的表返回错误"""
     result = await server_client.call_tool(
         name="describe_table",
-        arguments={"database": "nonexistent_db", "table_name": "some_table"},
+        arguments={"connection_name": "nonexistent_db", "table_name": "some_table"},
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
@@ -84,7 +84,8 @@ async def test_database_crud_operations(server_client: Client[FastMCPTransport])
     # 0. 清理：先删除可能存在的表
     drop_query = "DROP TABLE IF EXISTS test_users"
     await server_client.call_tool(
-        name="execute_query", arguments={"database": "test_db", "query": drop_query}
+        name="execute_query",
+        arguments={"connection_name": "test_db", "query": drop_query},
     )
 
     # 1. 创建表
@@ -97,7 +98,8 @@ async def test_database_crud_operations(server_client: Client[FastMCPTransport])
     )
     """
     result = await server_client.call_tool(
-        name="execute_query", arguments={"database": "test_db", "query": create_query}
+        name="execute_query",
+        arguments={"connection_name": "test_db", "query": create_query},
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
@@ -109,7 +111,8 @@ async def test_database_crud_operations(server_client: Client[FastMCPTransport])
     VALUES ('Alice', 'alice@example.com', 30)
     """
     result = await server_client.call_tool(
-        name="execute_query", arguments={"database": "test_db", "query": insert_query}
+        name="execute_query",
+        arguments={"connection_name": "test_db", "query": insert_query},
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
@@ -118,7 +121,8 @@ async def test_database_crud_operations(server_client: Client[FastMCPTransport])
     # 3. 查询数据并验证
     select_query = "SELECT * FROM test_users WHERE name = 'Alice'"
     result = await server_client.call_tool(
-        name="execute_query", arguments={"database": "test_db", "query": select_query}
+        name="execute_query",
+        arguments={"connection_name": "test_db", "query": select_query},
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
@@ -131,7 +135,8 @@ async def test_database_crud_operations(server_client: Client[FastMCPTransport])
     WHERE name = 'Alice'
     """
     result = await server_client.call_tool(
-        name="execute_query", arguments={"database": "test_db", "query": update_query}
+        name="execute_query",
+        arguments={"connection_name": "test_db", "query": update_query},
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
@@ -139,7 +144,8 @@ async def test_database_crud_operations(server_client: Client[FastMCPTransport])
 
     # 5. 验证更新后的数据
     result = await server_client.call_tool(
-        name="execute_query", arguments={"database": "test_db", "query": select_query}
+        name="execute_query",
+        arguments={"connection_name": "test_db", "query": select_query},
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
@@ -148,7 +154,8 @@ async def test_database_crud_operations(server_client: Client[FastMCPTransport])
     # 6. 删除数据
     delete_query = "DELETE FROM test_users WHERE name = 'Alice'"
     result = await server_client.call_tool(
-        name="execute_query", arguments={"database": "test_db", "query": delete_query}
+        name="execute_query",
+        arguments={"connection_name": "test_db", "query": delete_query},
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
@@ -156,7 +163,8 @@ async def test_database_crud_operations(server_client: Client[FastMCPTransport])
 
     # 7. 验证删除后数据为空
     result = await server_client.call_tool(
-        name="execute_query", arguments={"database": "test_db", "query": select_query}
+        name="execute_query",
+        arguments={"connection_name": "test_db", "query": select_query},
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
@@ -165,7 +173,8 @@ async def test_database_crud_operations(server_client: Client[FastMCPTransport])
     # 8. 清理：删除表
     drop_query = "DROP TABLE IF EXISTS test_users"
     result = await server_client.call_tool(
-        name="execute_query", arguments={"database": "test_db", "query": drop_query}
+        name="execute_query",
+        arguments={"connection_name": "test_db", "query": drop_query},
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
@@ -176,7 +185,7 @@ async def test_database_crud_operations(server_client: Client[FastMCPTransport])
 async def test_list_tables_basic(server_client: Client[FastMCPTransport]):
     """测试列出表"""
     result = await server_client.call_tool(
-        name="list_tables", arguments={"database": "test_db"}
+        name="list_tables", arguments={"connection_name": "test_db"}
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
@@ -189,7 +198,8 @@ async def test_describe_table_structure(server_client: Client[FastMCPTransport])
     # 清理：先删除可能存在的表
     drop_query = "DROP TABLE IF EXISTS test_describe_table"
     await server_client.call_tool(
-        name="execute_query", arguments={"database": "test_db", "query": drop_query}
+        name="execute_query",
+        arguments={"connection_name": "test_db", "query": drop_query},
     )
 
     # 先创建表
@@ -200,7 +210,8 @@ async def test_describe_table_structure(server_client: Client[FastMCPTransport])
     )
     """
     create_result = await server_client.call_tool(
-        name="execute_query", arguments={"database": "test_db", "query": create_query}
+        name="execute_query",
+        arguments={"connection_name": "test_db", "query": create_query},
     )
     assert create_result.data is not None
     assert isinstance(create_result.data, dict)
@@ -209,7 +220,7 @@ async def test_describe_table_structure(server_client: Client[FastMCPTransport])
     # 描述表结构
     result = await server_client.call_tool(
         name="describe_table",
-        arguments={"database": "test_db", "table_name": "test_describe_table"},
+        arguments={"connection_name": "test_db", "table_name": "test_describe_table"},
     )
     assert result.data is not None
     assert isinstance(result.data, dict)
@@ -218,5 +229,6 @@ async def test_describe_table_structure(server_client: Client[FastMCPTransport])
     # 清理：删除表
     drop_query = "DROP TABLE IF EXISTS test_describe_table"
     await server_client.call_tool(
-        name="execute_query", arguments={"database": "test_db", "query": drop_query}
+        name="execute_query",
+        arguments={"connection_name": "test_db", "query": drop_query},
     )

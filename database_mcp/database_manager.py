@@ -18,7 +18,7 @@ class DatabaseConfig(BaseModel):
     host: Annotated[str, Field(description="Database host")]
     user: Annotated[str, Field(description="Database user")]
     database: Annotated[str, Field(description="Database name")]
-    password: Annotated[str, Field(description="Database password")] = 0
+    password: Annotated[str, Field(description="Database password")]
     port: Annotated[int, Field(description="Database port")] = 0
     description: Annotated[
         str | None, Field(description="Description of this database")
@@ -161,12 +161,14 @@ class DatabaseManager:
             )
         return result
 
-    def execute_query(self, database: str, query: str) -> SelectResult | UpdateResult:
+    def execute_query(
+        self, connection_name: str, query: str
+    ) -> SelectResult | UpdateResult:
         """
         Execute a SQL query on specified database
 
         Args:
-            database: Name of the database to query
+            connection_name: Name of the database connection
             query: SQL query to execute
 
         Returns:
@@ -175,7 +177,7 @@ class DatabaseManager:
         WARNING: This method executes raw SQL and is vulnerable to SQL injection.
         Only use with trusted input or in controlled environments.
         """
-        engine = self.get_engine(database)
+        engine = self.get_engine(connection_name)
 
         with engine.connect() as conn:
             result = conn.execute(text(query))
@@ -195,27 +197,27 @@ class DatabaseManager:
                 conn.commit()
                 return UpdateResult(rows_affected=result.rowcount)
 
-    def list_tables(self, database: str) -> TablesResult:
+    def list_tables(self, connection_name: str) -> TablesResult:
         """
         List all tables in specified database
 
         Args:
-            database: Name of the database
+            connection_name: Name of the database connection
         """
-        engine = self.get_engine(database)
+        engine = self.get_engine(connection_name)
         inspector = inspect(engine)
         tables = inspector.get_table_names()
         return TablesResult(tables=tables, count=len(tables))
 
-    def describe_table(self, database: str, table_name: str) -> TableInfo:
+    def describe_table(self, connection_name: str, table_name: str) -> TableInfo:
         """
         Get table structure
 
         Args:
-            database: Name of the database
+            connection_name: Name of the database connection
             table_name: Name of the table to describe
         """
-        engine = self.get_engine(database)
+        engine = self.get_engine(connection_name)
         inspector = inspect(engine)
 
         # Validate table exists

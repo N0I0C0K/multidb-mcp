@@ -107,7 +107,7 @@ python demo.py
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
-| `database` | string | 数据库名称 |
+| `connection_name` | string | 配置文件中的数据库连接名称 |
 | `query` | string | SQL 查询语句 |
 
 ### 3. list_tables
@@ -116,7 +116,7 @@ python demo.py
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
-| `database` | string | 数据库名称 |
+| `connection_name` | string | 配置文件中的数据库连接名称 |
 
 ### 4. describe_table
 
@@ -124,7 +124,7 @@ python demo.py
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
-| `database` | string | 数据库名称 |
+| `connection_name` | string | 配置文件中的数据库连接名称 |
 | `table_name` | string | 表名 |
 
 ## 使用场景示例
@@ -163,23 +163,6 @@ uv pip install pytest pytest-asyncio
 
 # 运行测试
 pytest tests/ -v
-```
-
-### 项目结构
-
-```
-database-mcp/
-├── database_mcp/          # 主包
-│   ├── __init__.py
-│   ├── server.py          # MCP 服务器入口
-│   └── database_manager.py # 数据库管理器
-├── tests/                 # 测试文件
-│   ├── __init__.py
-│   └── test_database_manager.py
-├── config.example.json    # 配置文件示例
-├── demo.py                # 演示脚本
-├── README.md              # 本文件
-└── pyproject.toml         # 项目配置
 ```
 
 ## 安全注意事项
