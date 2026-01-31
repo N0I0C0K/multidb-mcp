@@ -2,6 +2,7 @@
 Multi-Database MCP Server
 A Model Context Protocol server for managing multiple database connections
 """
+import os
 from dataclasses import dataclass, asdict
 from typing import Any, List, Optional
 from fastmcp import FastMCP
@@ -11,8 +12,14 @@ from database_mcp.database_manager import DatabaseManager, DatabaseInfo, QueryRe
 # Initialize FastMCP server
 mcp = FastMCP("database-mcp")
 
-# Initialize database manager (loads from environment variables)
+# Determine config file path
+# Priority: DATABASE_CONFIG_PATH env var > default config.json
+config_path = os.environ.get("DATABASE_CONFIG_PATH", "config.json")
+
+# Initialize database manager with config file
 db_manager = DatabaseManager()
+if os.path.exists(config_path):
+    db_manager.load_config(config_path)
 
 
 @dataclass

@@ -104,6 +104,14 @@ cp config.example.json config.json
 - `mysql` - MySQL 数据库
 - `postgresql` - PostgreSQL 数据库
 
+### 配置文件路径
+
+配置文件路径可以通过以下方式指定（按优先级排序）：
+
+1. **命令行参数** - 使用 `--config` 或 `-c` 参数
+2. **环境变量** - 设置 `DATABASE_CONFIG_PATH` 环境变量
+3. **默认路径** - 当前目录的 `config.json` 文件
+
 ## 使用方法
 
 ### 启动 MCP 服务器
@@ -111,40 +119,46 @@ cp config.example.json config.json
 方式一：使用 uvx（推荐，无需安装）
 
 ```bash
+# 使用默认配置文件 (config.json)
 uvx --from . database-mcp
+
+# 使用自定义配置文件
+uvx --from . database-mcp --config /path/to/config.json
 ```
 
 方式二：使用已安装的命令
 
 ```bash
+# 使用默认配置文件
 database-mcp
+
+# 使用自定义配置文件
+database-mcp --config /path/to/config.json
 ```
 
 方式三：作为 Python 模块运行
 
 ```bash
+# 使用默认配置文件
 python -m database_mcp
+
+# 使用自定义配置文件
+python -m database_mcp --config /path/to/config.json
 ```
 
-方式四：直接运行服务器文件
+方式四：使用环境变量指定配置文件
 
 ```bash
-python -m database_mcp.server
+export DATABASE_CONFIG_PATH=/path/to/your/config.json
+database-mcp
+# 或
+python -m database_mcp
 ```
 
 方式五：使用 fastmcp 的开发模式
 
 ```bash
 fastmcp dev database_mcp/server.py
-```
-
-方式六：使用自定义配置文件路径
-
-```bash
-export DATABASE_CONFIG=/path/to/your/config.json
-database-mcp
-# 或
-python -m database_mcp
 ```
 
 ### 运行演示

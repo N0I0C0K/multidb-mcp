@@ -67,14 +67,21 @@ cp config.example.json config.json
 # 使用 uvx（推荐，无需安装）
 uvx --from . database-mcp
 
+# 使用自定义配置文件
+uvx --from . database-mcp --config /path/to/config.json
+
 # 使用已安装的命令
+database-mcp
+
+# 使用环境变量指定配置文件路径
+export DATABASE_CONFIG_PATH=/path/to/config.json
 database-mcp
 
 # 作为 Python 模块运行
 python -m database_mcp
 
-# 或直接运行服务器文件
-python -m database_mcp.server
+# 使用命令行参数指定配置文件
+python -m database_mcp --config /path/to/config.json
 ```
 
 或使用 fastmcp 开发模式：

@@ -6,7 +6,9 @@
       "port": 3306,
       "user": "root",
       "password": "password",
-      "database": "dev_db"
+      "database": "dev_db",
+      "description": "Development database 1",
+      "alias": "dev"
     },
     "production": {
       "type": "mysql",
@@ -14,7 +16,9 @@
       "port": 3306,
       "user": "readonly",
       "password": "secure_password",
-      "database": "prod_db"
+      "database": "prod_db",
+      "description": "Production database - read-only access",
+      "alias": "prod"
     },
     "test": {
       "type": "postgresql",
@@ -22,7 +26,8 @@
       "port": 5432,
       "user": "postgres",
       "password": "password",
-      "database": "test_db"
+      "database": "test_db",
+      "description": "Testing database"
     }
   }
 }

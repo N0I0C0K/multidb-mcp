@@ -1,11 +1,11 @@
 """
 Database connection manager for multi-database support
 """
-import os
+import json
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, List, Literal
 from urllib.parse import quote_plus
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.engine import Engine
 
@@ -77,49 +77,33 @@ class TableInfo:
 class DatabaseManager:
     """Manage multiple database connections (stateless)"""
     
-    def __init__(self):
+    def __init__(self, config_path: Optional[str] = None):
+        """
+        Initialize database manager
+        
+        Args:
+            config_path: Path to configuration file. If None, no config is loaded.
+        """
         self.databases: Dict[str, DatabaseConfig] = {}
         self.engines: Dict[str, Engine] = {}
-        self._load_from_env()
+        
+        if config_path:
+            self.load_config(config_path)
     
-    def _load_from_env(self):
-        """Load database configurations from environment variables"""
-        # Look for DATABASE_CONFIG_JSON environment variable
-        config_json = os.environ.get("DATABASE_CONFIG_JSON")
-        if config_json:
-            import json
-            config = json.loads(config_json)
-            databases = config.get("databases", {})
-            for name, db_config in databases.items():
-                db_config['name'] = name
-                self.add_database(DatabaseConfig(**db_config))
+    def load_config(self, config_path: str):
+        """
+        Load database configurations from JSON file
         
-        # Also support individual database configs via env vars
-        # Format: DB_{NAME}_TYPE, DB_{NAME}_HOST, etc.
-        prefix = "DB_"
-        db_names = set()
-        for key in os.environ.keys():
-            if key.startswith(prefix):
-                parts = key[len(prefix):].split('_', 1)
-                if len(parts) >= 1:
-                    db_names.add(parts[0])
+        Args:
+            config_path: Path to the JSON configuration file
+        """
+        with open(config_path, 'r') as f:
+            config = json.load(f)
         
-        for db_name in db_names:
-            name_lower = db_name.lower()
-            db_type = os.environ.get(f"DB_{db_name}_TYPE")
-            if db_type:
-                config_dict = {
-                    "name": name_lower,
-                    "type": db_type,
-                    "host": os.environ.get(f"DB_{db_name}_HOST", "localhost"),
-                    "port": int(os.environ.get(f"DB_{db_name}_PORT", "0")) or None,
-                    "user": os.environ.get(f"DB_{db_name}_USER", "root"),
-                    "password": os.environ.get(f"DB_{db_name}_PASSWORD", ""),
-                    "database": os.environ.get(f"DB_{db_name}_DATABASE", ""),
-                    "description": os.environ.get(f"DB_{db_name}_DESCRIPTION"),
-                    "alias": os.environ.get(f"DB_{db_name}_ALIAS"),
-                }
-                self.add_database(DatabaseConfig(**config_dict))
+        databases = config.get("databases", {})
+        for name, db_config in databases.items():
+            db_config['name'] = name
+            self.add_database(DatabaseConfig(**db_config))
     
     def add_database(self, config: DatabaseConfig):
         """Add a database configuration"""

@@ -3,6 +3,7 @@ Tests for the database manager
 """
 import pytest
 import json
+import tempfile
 import os
 from database_mcp.database_manager import DatabaseManager, DatabaseConfig
 
@@ -101,172 +102,114 @@ def test_database_config_default_port():
 
 def test_database_manager_add():
     """Test adding databases to manager"""
-    # Clear environment variables for this test
-    old_env = os.environ.copy()
-    try:
-        for key in list(os.environ.keys()):
-            if key.startswith('DB_') or key == 'DATABASE_CONFIG_JSON':
-                del os.environ[key]
-        
-        manager = DatabaseManager()
-        
-        config = DatabaseConfig(
-            name="test1",
-            type="mysql",
-            host="localhost",
-            port=3306,
-            user="root",
-            password="test",
-            database="testdb"
-        )
-        
-        manager.add_database(config)
-        assert "test1" in manager.databases
-        assert manager.databases["test1"].name == "test1"
-    finally:
-        os.environ.clear()
-        os.environ.update(old_env)
+    manager = DatabaseManager()
+    
+    config = DatabaseConfig(
+        name="test1",
+        type="mysql",
+        host="localhost",
+        port=3306,
+        user="root",
+        password="test",
+        database="testdb"
+    )
+    
+    manager.add_database(config)
+    assert "test1" in manager.databases
+    assert manager.databases["test1"].name == "test1"
 
 
-def test_database_manager_env_json():
-    """Test loading configuration from environment JSON"""
+def test_database_manager_load_config():
+    """Test loading configuration from file"""
     config_data = {
         "databases": {
             "dev": {
-                "name": "dev",
                 "type": "mysql",
                 "host": "localhost",
                 "port": 3306,
                 "user": "root",
                 "password": "test",
-                "database": "dev_db"
+                "database": "dev_db",
+                "description": "Development database"
             },
             "prod": {
-                "name": "prod",
                 "type": "postgresql",
                 "host": "prod.example.com",
                 "port": 5432,
                 "user": "postgres",
                 "password": "test",
-                "database": "prod_db"
+                "database": "prod_db",
+                "alias": "production"
             }
         }
     }
     
-    old_env = os.environ.copy()
+    # Create temporary config file
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        json.dump(config_data, f)
+        temp_path = f.name
+    
     try:
-        # Clear environment
-        for key in list(os.environ.keys()):
-            if key.startswith('DB_') or key == 'DATABASE_CONFIG_JSON':
-                del os.environ[key]
-        
-        os.environ['DATABASE_CONFIG_JSON'] = json.dumps(config_data)
-        manager = DatabaseManager()
+        manager = DatabaseManager(temp_path)
         
         assert len(manager.databases) == 2
         assert "dev" in manager.databases
         assert "prod" in manager.databases
+        assert manager.databases["dev"].description == "Development database"
+        assert manager.databases["prod"].alias == "production"
     finally:
-        os.environ.clear()
-        os.environ.update(old_env)
-
-
-def test_database_manager_env_vars():
-    """Test loading configuration from individual environment variables"""
-    old_env = os.environ.copy()
-    try:
-        # Clear environment
-        for key in list(os.environ.keys()):
-            if key.startswith('DB_') or key == 'DATABASE_CONFIG_JSON':
-                del os.environ[key]
-        
-        os.environ['DB_TEST_TYPE'] = 'mysql'
-        os.environ['DB_TEST_HOST'] = 'localhost'
-        os.environ['DB_TEST_USER'] = 'root'
-        os.environ['DB_TEST_DATABASE'] = 'testdb'
-        os.environ['DB_TEST_DESCRIPTION'] = 'Test database'
-        os.environ['DB_TEST_ALIAS'] = 'test_alias'
-        
-        manager = DatabaseManager()
-        
-        assert "test" in manager.databases
-        assert manager.databases["test"].type == "mysql"
-        assert manager.databases["test"].description == "Test database"
-        assert manager.databases["test"].alias == "test_alias"
-    finally:
-        os.environ.clear()
-        os.environ.update(old_env)
+        os.unlink(temp_path)
 
 
 def test_database_manager_get_engine():
     """Test getting database engine"""
-    old_env = os.environ.copy()
-    try:
-        # Clear environment
-        for key in list(os.environ.keys()):
-            if key.startswith('DB_') or key == 'DATABASE_CONFIG_JSON':
-                del os.environ[key]
-        
-        manager = DatabaseManager()
-        config = DatabaseConfig(
-            name="db1",
-            type="mysql",
-            host="localhost",
-            user="root",
-            database="db1"
-        )
-        manager.add_database(config)
-        
-        # Should be able to get engine by name
-        engine = manager.get_engine("db1")
-        assert engine is not None
-        
-        # Should raise error for invalid database
-        with pytest.raises(ValueError):
-            manager.get_engine("invalid")
-    finally:
-        os.environ.clear()
-        os.environ.update(old_env)
+    manager = DatabaseManager()
+    config = DatabaseConfig(
+        name="db1",
+        type="mysql",
+        host="localhost",
+        user="root",
+        database="db1"
+    )
+    manager.add_database(config)
+    
+    # Should be able to get engine by name
+    engine = manager.get_engine("db1")
+    assert engine is not None
+    
+    # Should raise error for invalid database
+    with pytest.raises(ValueError):
+        manager.get_engine("invalid")
 
 
 def test_database_manager_list():
     """Test listing databases"""
-    old_env = os.environ.copy()
-    try:
-        # Clear environment
-        for key in list(os.environ.keys()):
-            if key.startswith('DB_') or key == 'DATABASE_CONFIG_JSON':
-                del os.environ[key]
-        
-        manager = DatabaseManager()
-        
-        manager.add_database(DatabaseConfig(
-            name="db1",
-            type="mysql",
-            host="localhost",
-            port=3306,
-            user="root",
-            database="db1",
-            description="First database"
-        ))
-        manager.add_database(DatabaseConfig(
-            name="db2",
-            type="postgresql",
-            host="remote",
-            port=5432,
-            user="postgres",
-            database="db2",
-            alias="pg_db"
-        ))
-        
-        databases = manager.list_databases()
-        assert len(databases) == 2
-        assert databases[0].name == "db1"
-        assert databases[0].type == "mysql"
-        assert databases[0].description == "First database"
-        assert databases[1].name == "db2"
-        assert databases[1].type == "postgresql"
-        assert databases[1].alias == "pg_db"
-    finally:
-        os.environ.clear()
-        os.environ.update(old_env)
+    manager = DatabaseManager()
+    
+    manager.add_database(DatabaseConfig(
+        name="db1",
+        type="mysql",
+        host="localhost",
+        port=3306,
+        user="root",
+        database="db1",
+        description="First database"
+    ))
+    manager.add_database(DatabaseConfig(
+        name="db2",
+        type="postgresql",
+        host="remote",
+        port=5432,
+        user="postgres",
+        database="db2",
+        alias="pg_db"
+    ))
+    
+    databases = manager.list_databases()
+    assert len(databases) == 2
+    assert databases[0].name == "db1"
+    assert databases[0].type == "mysql"
+    assert databases[0].description == "First database"
+    assert databases[1].name == "db2"
+    assert databases[1].type == "postgresql"
+    assert databases[1].alias == "pg_db"
