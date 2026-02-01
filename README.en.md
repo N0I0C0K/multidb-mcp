@@ -103,7 +103,7 @@ List all configured databases.
 
 ### 2. execute_query
 
-Execute SQL query on specified database.
+Execute SQL query on specified database. For data modification operations (INSERT/UPDATE/DELETE), user confirmation is requested.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|

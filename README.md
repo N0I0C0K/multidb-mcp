@@ -103,7 +103,7 @@ python demo.py
 
 ### 2. execute_query
 
-在指定数据库上执行 SQL 查询。
+在指定数据库上执行 SQL 查询。对于修改操作（INSERT/UPDATE/DELETE），会请求用户确认影响行数。
 
 | 参数 | 类型 | 说明 |
 |------|------|------|

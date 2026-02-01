@@ -194,7 +194,8 @@ def mysql_manager() -> Generator[DatabaseManager, None, None]:
     max_retries = 30
     for i in range(max_retries):
         try:
-            manager.execute_query("mysql_test", "SELECT 1")
+            with manager.execute_query("mysql_test", "SELECT 1"):
+                pass
             break
         except Exception as e:
             if i == max_retries - 1:
@@ -226,7 +227,8 @@ def postgres_manager() -> Generator[DatabaseManager, None, None]:
     max_retries = 30
     for i in range(max_retries):
         try:
-            manager.execute_query("postgres_test", "SELECT 1")
+            with manager.execute_query("postgres_test", "SELECT 1"):
+                pass
             break
         except Exception as e:
             if i == max_retries - 1:
@@ -239,56 +241,68 @@ def postgres_manager() -> Generator[DatabaseManager, None, None]:
 
 def test_mysql_create_table(mysql_manager: DatabaseManager) -> None:
     """测试 MySQL 创建表"""
-    mysql_manager.execute_query("mysql_test", "DROP TABLE IF EXISTS test_users")
-    result = mysql_manager.execute_query(
+    with mysql_manager.execute_query("mysql_test", "DROP TABLE IF EXISTS test_users"):
+        pass
+
+    with mysql_manager.execute_query(
         "mysql_test", "CREATE TABLE test_users (id INT PRIMARY KEY, name VARCHAR(50))"
-    )
-    assert result.rows_affected == 0
+    ) as result:
+        assert result.rows_affected == 0
+
+
+def test_mysql_insert_select(mysql_manager: DatabaseManager) -> None:
     """测试 MySQL 插入和查询"""
-    mysql_manager.execute_query("mysql_test", "DROP TABLE IF EXISTS test_users")
-    mysql_manager.execute_query(
+    with mysql_manager.execute_query("mysql_test", "DROP TABLE IF EXISTS test_users"):
+        pass
+    with mysql_manager.execute_query(
         "mysql_test", "CREATE TABLE test_users (id INT PRIMARY KEY, name VARCHAR(50))"
-    )
+    ):
+        pass
 
     # 插入数据
-    insert_result = mysql_manager.execute_query(
+    with mysql_manager.execute_query(
         "mysql_test", "INSERT INTO test_users VALUES (1, 'Alice'), (2, 'Bob')"
-    )
-    assert insert_result.rows_affected == 2
+    ) as insert_result:
+        assert insert_result.rows_affected == 2
 
     # 查询数据
-    select_result = mysql_manager.execute_query(
+    with mysql_manager.execute_query(
         "mysql_test", "SELECT * FROM test_users ORDER BY id"
-    )
-    assert select_result.row_count == 2
-    assert select_result.columns == ["id", "name"]
-    assert select_result.data[0]["name"] == "Alice"
-    assert select_result.data[1]["name"] == "Bob"
+    ) as select_result:
+        assert select_result.row_count == 2
+        assert select_result.columns == ["id", "name"]
+        assert select_result.data[0]["name"] == "Alice"
+        assert select_result.data[1]["name"] == "Bob"
 
 
 def test_mysql_update(mysql_manager: DatabaseManager) -> None:
     """测试 MySQL 更新"""
-    mysql_manager.execute_query("mysql_test", "DROP TABLE IF EXISTS test_users")
-    mysql_manager.execute_query(
+    with mysql_manager.execute_query("mysql_test", "DROP TABLE IF EXISTS test_users"):
+        pass
+    with mysql_manager.execute_query(
         "mysql_test", "CREATE TABLE test_users (id INT PRIMARY KEY, name VARCHAR(50))"
-    )
-    mysql_manager.execute_query(
+    ):
+        pass
+    with mysql_manager.execute_query(
         "mysql_test", "INSERT INTO test_users VALUES (1, 'Alice'), (2, 'Bob')"
-    )
+    ):
+        pass
 
-    result = mysql_manager.execute_query(
+    with mysql_manager.execute_query(
         "mysql_test", "UPDATE test_users SET name='John' WHERE id=1"
-    )
-    assert result.rows_affected == 1
+    ) as result:
+        assert result.rows_affected == 1
 
 
 def test_mysql_describe_table(mysql_manager: DatabaseManager) -> None:
     """测试 MySQL 描述表结构"""
-    mysql_manager.execute_query("mysql_test", "DROP TABLE IF EXISTS test_users")
-    mysql_manager.execute_query(
+    with mysql_manager.execute_query("mysql_test", "DROP TABLE IF EXISTS test_users"):
+        pass
+    with mysql_manager.execute_query(
         "mysql_test",
         "CREATE TABLE test_users (id INT PRIMARY KEY, name VARCHAR(50), INDEX idx_name(name))",
-    )
+    ):
+        pass
 
     table_info = mysql_manager.describe_table("mysql_test", "test_users")
     assert table_info.table_name == "test_users"
@@ -299,21 +313,25 @@ def test_mysql_describe_table(mysql_manager: DatabaseManager) -> None:
 
 def test_postgres_insert_select(postgres_manager: DatabaseManager) -> None:
     """测试 PostgreSQL 插入和查询"""
-    postgres_manager.execute_query("postgres_test", "DROP TABLE IF EXISTS test_users")
-    postgres_manager.execute_query(
+    with postgres_manager.execute_query(
+        "postgres_test", "DROP TABLE IF EXISTS test_users"
+    ):
+        pass
+    with postgres_manager.execute_query(
         "postgres_test",
         "CREATE TABLE test_users (id INT PRIMARY KEY, name VARCHAR(50))",
-    )
+    ):
+        pass
 
     # 插入数据
-    insert_result = postgres_manager.execute_query(
+    with postgres_manager.execute_query(
         "postgres_test", "INSERT INTO test_users VALUES (1, 'Alice'), (2, 'Bob')"
-    )
-    assert insert_result.rows_affected == 2
+    ) as insert_result:
+        assert insert_result.rows_affected == 2
 
     # 查询数据
-    select_result = postgres_manager.execute_query(
+    with postgres_manager.execute_query(
         "postgres_test", "SELECT * FROM test_users ORDER BY id"
-    )
-    assert select_result.row_count == 2
-    assert select_result.data[0]["name"] == "Alice"
+    ) as select_result:
+        assert select_result.row_count == 2
+        assert select_result.data[0]["name"] == "Alice"

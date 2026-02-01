@@ -6,7 +6,8 @@ A Model Context Protocol server for managing multiple database connections
 import os
 from typing import Annotated, TypeVar, Generic
 from pydantic import BaseModel, Field
-from fastmcp import FastMCP
+from fastmcp import FastMCP, Context
+from fastmcp.exceptions import McpError
 from multidb_mcp.database_manager import (
     DatabaseManager,
     DatabaseInfo,
@@ -22,6 +23,7 @@ mcp = FastMCP("multidb-mcp")
 # Determine config file path
 # Priority: DATABASE_CONFIG_PATH env var > default config.json
 config_path = os.environ.get("DATABASE_CONFIG_PATH", "config.json")
+DEFAULT_MAX_ROWS_AFFECTED = int(os.environ.get("DEFAULT_MAX_ROWS_AFFECTED", "100"))
 
 # Initialize database manager with config file
 db_manager = DatabaseManager()
@@ -53,6 +55,12 @@ class SuccessResponse(
     data: _T
 
 
+class UserAbortException(Exception):
+    """Exception raised when a user aborts an operation."""
+
+    pass
+
+
 @mcp.resource("database://list")
 def list_databases_resource():
     """
@@ -65,7 +73,8 @@ def list_databases_resource():
 
 
 @mcp.tool()
-def execute_query(
+async def execute_query(
+    ctx: Context,
     connection_name: CONNECTION_NAME,
     query: Annotated[str, Field(description="SQL query to execute")],
 ) -> SuccessResponse[SelectResult | UpdateResult] | ErrorResponse:
@@ -78,9 +87,35 @@ def execute_query(
         SuccessResponse with SelectResult or UpdateResult, or ErrorResponse on error
     """
     try:
-        result = db_manager.execute_query(connection_name, query)
-        return SuccessResponse(success=True, data=result)
+        with db_manager.execute_query(connection_name, query) as result:
+            match result:
+                case SelectResult():
+                    return SuccessResponse(success=True, data=result)
+                case UpdateResult():
+                    try:
+                        reaction = await ctx.elicit(
+                            f"Confirm to commit the transaction affecting {result.rows_affected} rows?",
+                            None,
+                        )
+                        if reaction.action != "accept":
+                            raise UserAbortException("Transaction rolled back by user.")
+                    except McpError:
+                        if result.rows_affected > DEFAULT_MAX_ROWS_AFFECTED:
+                            raise UserAbortException(
+                                f"Transaction affecting {result.rows_affected} rows exceeds the default limit of {DEFAULT_MAX_ROWS_AFFECTED} rows."
+                            )
+                        pass
+                    return SuccessResponse(success=True, data=result)
     except Exception as e:
+        await ctx.error(
+            f"Error executing query: {e}",
+            extra={
+                "connection_name": connection_name,
+                "query": query,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+        )
         return ErrorResponse(success=False, error=str(e))
 
 

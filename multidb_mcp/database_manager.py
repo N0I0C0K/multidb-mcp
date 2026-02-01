@@ -3,11 +3,12 @@ Database connection manager for multi-database support
 """
 
 import json
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, Iterator
 from urllib.parse import quote_plus
 from pydantic import BaseModel, Field
-from sqlalchemy import create_engine, text, inspect
+from sqlalchemy import create_engine, text, inspect, Connection
 from sqlalchemy.engine import Engine
+from contextlib import contextmanager
 
 
 class DatabaseConfig(BaseModel):
@@ -161,25 +162,30 @@ class DatabaseManager:
             )
         return result
 
+    @contextmanager
     def execute_query(
-        self, connection_name: str, query: str
-    ) -> SelectResult | UpdateResult:
+        self, connection_name: str, query: str, max_rows_affected: int | None = None
+    ) -> Iterator[SelectResult | UpdateResult]:
         """
         Execute a SQL query on specified database
 
         Args:
             connection_name: Name of the database connection
             query: SQL query to execute
+            max_rows_affected: Maximum number of rows that can be affected by UPDATE/INSERT/DELETE queries.
+                             If the actual rows affected exceeds this limit, the transaction will be rolled back.
+                             None means no limit. (default: None)
 
         Returns:
             SelectResult for SELECT queries, UpdateResult for INSERT/UPDATE/DELETE
 
+        Raises:
+            ValueError: If rows_affected exceeds max_rows_affected limit
+
         WARNING: This method executes raw SQL and is vulnerable to SQL injection.
         Only use with trusted input or in controlled environments.
         """
-        engine = self.get_engine(connection_name)
-
-        with engine.connect() as conn:
+        with self.get_engine(connection_name).begin() as conn:
             result = conn.execute(text(query))
 
             # Handle different types of queries
@@ -192,10 +198,17 @@ class DatabaseManager:
                 for row in rows:
                     data.append(row._asdict())
 
-                return SelectResult(columns=columns, data=data, row_count=len(data))
+                yield SelectResult(columns=columns, data=data, row_count=len(data))
             else:
-                conn.commit()
-                return UpdateResult(rows_affected=result.rowcount)
+                rows_affected = result.rowcount
+
+                # Check if rows affected exceeds the limit
+                if max_rows_affected is not None and rows_affected > max_rows_affected:
+                    raise ValueError(
+                        f"Query would affect {rows_affected} rows, which exceeds the maximum allowed limit of {max_rows_affected}. Transaction has been rolled back."
+                    )
+
+                yield UpdateResult(rows_affected=rows_affected)
 
     def list_tables(self, connection_name: str) -> TablesResult:
         """
