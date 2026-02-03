@@ -47,10 +47,10 @@ class DatabaseConfig(BaseModel):
             raise ValueError(f"Unsupported database type: {self.type}")
 
 
-class DatabaseInfo(BaseModel):
+class ConnectionInfo(BaseModel):
     """Information about a database connection"""
 
-    name: str
+    connection_name: str
     type: str
     host: str
     port: int
@@ -130,6 +130,10 @@ class DatabaseManager:
             db_config["name"] = name
             self.add_database(DatabaseConfig.model_validate(db_config))
 
+    def connection_names(self) -> list[str]:
+        """Get list of configured database connection names"""
+        return list(self.databases.keys())
+
     def add_database(self, config: DatabaseConfig):
         """Add a database configuration"""
         self.databases[config.name] = config
@@ -145,13 +149,13 @@ class DatabaseManager:
 
         return self.engines[name]
 
-    def list_databases(self) -> list[DatabaseInfo]:
+    def list_databases(self) -> list[ConnectionInfo]:
         """List all configured databases"""
         result = []
         for name, config in self.databases.items():
             result.append(
-                DatabaseInfo(
-                    name=config.name,
+                ConnectionInfo(
+                    connection_name=config.name,
                     type=config.type,
                     host=config.host,
                     port=config.port,

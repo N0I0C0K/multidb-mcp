@@ -15,7 +15,25 @@
 ### 推荐方式：使用 uvx
 
 ```bash
-uvx --from . multidb-mcp
+uvx multidb-mcp
+```
+
+MCP 配置示例：
+
+```json
+{
+  "multidb-mcp": {
+    "type": "stdio",
+    "command": "uvx",
+    "args": [
+      "multidb_mcp"
+    ],
+    "env": {
+      "DATABASE_CONFIG_PATH": "xxx/database.json",
+      "DEFAULT_MAX_ROWS_AFFECTED": "1"
+    }
+  }
+}
 ```
 
 ### 其他方式

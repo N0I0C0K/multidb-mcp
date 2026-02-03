@@ -142,7 +142,7 @@ def test_list_databases(temp_config: str) -> None:
     manager = DatabaseManager(temp_config)
     dbs = manager.list_databases()
     assert len(dbs) == 1
-    assert dbs[0].name == "test_db"
+    assert dbs[0].connection_name == "test_db"
     assert dbs[0].type == "mysql"
     assert dbs[0].description == "Test database"
 

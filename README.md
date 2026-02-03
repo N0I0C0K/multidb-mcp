@@ -15,7 +15,25 @@ MCP (Model Context Protocol) server supporting multiple remote databases. Statel
 ### Recommended: Using uvx
 
 ```bash
-uvx --from . multidb-mcp
+uvx multidb-mcp
+```
+
+MCP configuration example:
+
+```json
+{
+  "multidb-mcp": {
+    "type": "stdio",
+    "command": "uvx",
+    "args": [
+      "multidb_mcp"
+    ],
+    "env": {
+      "DATABASE_CONFIG_PATH": "xxx/database.json",
+      "DEFAULT_MAX_ROWS_AFFECTED": "1"
+    }
+  }
+}
 ```
 
 ### Other methods

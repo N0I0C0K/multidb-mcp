@@ -4,13 +4,14 @@ A Model Context Protocol server for managing multiple database connections
 """
 
 import os
-from typing import Annotated, TypeVar, Generic
+from typing import Annotated, TypeVar, Generic, TypeAlias
+
 from pydantic import BaseModel, Field
 from fastmcp import FastMCP, Context
 from fastmcp.exceptions import McpError
 from multidb_mcp.database_manager import (
     DatabaseManager,
-    DatabaseInfo,
+    ConnectionInfo,
     SelectResult,
     UpdateResult,
     TableInfo,
@@ -38,10 +39,23 @@ class ErrorResponse(BaseModel):
     error: str
 
 
-_T = TypeVar("_T", bound=BaseModel)
-CONNECTION_NAME = Annotated[
+_T = TypeVar("_T")
+
+
+def _add_connection_name_schema(extra: dict):
+    extra.update(
+        {
+            "enum": db_manager.connection_names(),
+        }
+    )
+
+
+CONNECTION_NAME: TypeAlias = Annotated[
     str,
-    Field(description="Name of the database connection defined in config file"),
+    Field(
+        description="Name of the database connection defined in config file",
+        json_schema_extra=_add_connection_name_schema,
+    ),
 ]
 
 
@@ -70,6 +84,22 @@ def list_databases_resource():
         all database configurations
     """
     return db_manager.list_databases()
+
+
+@mcp.tool()
+def list_connections(
+    connection_name: Annotated[
+        str | None, Field(description="Name of the database connection")
+    ] = None,
+) -> SuccessResponse[list[ConnectionInfo]]:
+    """List all configured database connections, or details of a specific connection"""
+    if connection_name:
+        db_info = db_manager.list_databases()
+        for db in db_info:
+            if db.connection_name == connection_name:
+                return SuccessResponse(success=True, data=[db])
+        return SuccessResponse(success=True, data=[])
+    return SuccessResponse(success=True, data=db_manager.list_databases())
 
 
 @mcp.tool()
